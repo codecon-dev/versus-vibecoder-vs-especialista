@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Notion Clone{% endblock %}</title>
+
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📝</text></svg>">
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    {% block extra_css %}{% endblock %}
+
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 260px;
+            background-color: #f7f6f3;
+            border-right: 1px solid #e0e0e0;
+            padding: 20px 10px;
+            overflow-y: auto;
+            z-index: 100;
+        }
+        .main-content {
+            margin-left: 260px;
+            padding: 40px 80px;
+            max-width: 900px;
+        }
+        .sidebar-header {
+            padding: 10px 15px;
+            margin-bottom: 20px;
+        }
+        .sidebar-user {
+            font-size: 14px;
+            font-weight: 600;
+            color: #37352f;
+            margin-bottom: 5px;
+        }
+        .page-link-item {
+            display: flex;
+            align-items: center;
+            padding: 6px 12px;
+            margin: 2px 0;
+            border-radius: 4px;
+            text-decoration: none;
+            color: #37352f;
+            font-size: 14px;
+            transition: background-color 0.15s;
+        }
+        .page-link-item:hover {
+            background-color: #e8e7e3;
+            color: #37352f;
+        }
+        .page-link-item.active {
+            background-color: #e0dfd9;
+        }
+        .page-link-item i {
+            margin-right: 8px;
+            font-size: 16px;
+        }
+        .page-title-editor {
+            font-size: 40px;
+            font-weight: 700;
+            border: none;
+            outline: none;
+            width: 100%;
+            padding: 8px 0;
+            margin-bottom: 20px;
+            background: transparent;
+        }
+        .page-title-editor:focus {
+            background-color: #fff;
+        }
+        .save-btn {
+            position: fixed;
+            top: 20px;
+            right: 40px;
+            z-index: 10;
+        }
+        .child-page {
+            margin-left: 20px;
+        }
+        .logout-link {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    {% if user.is_authenticated %}
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-user">
+                    <i class="bi bi-person-circle"></i> {{ user.username }}
+                </div>
+            </div>
+
+            {% include 'sidebar.html' %}
+
+            <div class="logout-link">
+                <a href="{% url 'logout' %}" class="page-link-item">
+                    <i class="bi bi-box-arrow-left"></i>
+                    Sair
+                </a>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </div>
+    {% else %}
+        <!-- Content for non-authenticated users -->
+        <div class="container mt-5">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% block auth_content %}{% endblock %}
+        </div>
+    {% endif %}
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
