@@ -1,0 +1,351 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page.title }} - Notion Clone{% endblock %}
+
+{% block extra_css %}
+<style>
+    .ce-block__content,
+    .ce-toolbar__content {
+        max-width: 100%;
+    }
+    .codex-editor__redactor {
+        padding-bottom: 100px !important;
+    }
+    #editorjs {
+        background: white;
+        padding: 20px;
+        border-radius: 4px;
+        min-height: 400px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<button class="btn btn-primary save-btn" id="save-btn">
+    <i class="bi bi-save"></i> Salvar
+</button>
+
+<input type="text"
+       class="page-title-editor"
+       id="page-title"
+       value="{{ page.title }}"
+       placeholder="Sem título">
+
+<div id="editorjs"></div>
+
+<!-- Modal para criar nova página -->
+<div class="modal fade" id="createPageModal" tabindex="-1" aria-labelledby="createPageModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createPageModalLabel">
+                    <i class="bi bi-file-earmark-plus"></i> Criar Nova Página
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createPageForm">
+                    <div class="mb-3">
+                        <label for="newPageTitle" class="form-label">Título da nova página</label>
+                        <input type="text"
+                               class="form-control"
+                               id="newPageTitle"
+                               placeholder="Digite o título da página..."
+                               required
+                               autofocus>
+                        <div class="form-text">A nova página será criada como filha desta página atual.</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="confirmCreatePage">
+                    <i class="bi bi-check-lg"></i> Criar Página
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const pageId = {{ page.id }};
+    const csrfToken = '{{ csrf_token }}';
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Editor.js Core -->
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/header@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/list@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/quote@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/simple-image@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/embed@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/paragraph@latest"></script>
+
+<script>
+// Variável global para o editor
+let editor;
+
+// Plugin customizado para criar nova página (/pagina)
+class NewPageTool {
+    static get toolbox() {
+        return {
+            title: 'Nova Página',
+            icon: '<svg width="17" height="15" viewBox="0 0 336 276" xmlns="http://www.w3.org/2000/svg"><path d="M291 150V79c0-19-15-34-34-34H79c-19 0-34 15-34 34v42l67-44 81 72 56-29 42 30zm0 52l-43-30-56 30-81-67-66 39v23c0 19 15 34 34 34h178c17 0 31-13 34-29zM79 0h178c44 0 79 35 79 79v118c0 44-35 79-79 79H79c-44 0-79-35-79-79V79C0 35 35 0 79 0z"/></svg>'
+        };
+    }
+
+    constructor({data, api}) {
+        this.api = api;
+        this.data = data;
+    }
+
+    render() {
+        const wrapper = document.createElement('div');
+        wrapper.classList.add('alert', 'alert-info');
+        wrapper.innerHTML = `
+            <i class="bi bi-file-earmark-plus"></i>
+            <strong>Nova Página:</strong> Clique para criar uma página filha
+            <button class="btn btn-sm btn-primary ms-2" onclick="openCreatePageModal()">
+                Criar Página
+            </button>
+        `;
+        return wrapper;
+    }
+
+    save(blockContent) {
+        return this.data;
+    }
+}
+
+// Função global para abrir o modal
+function openCreatePageModal() {
+    const modal = new bootstrap.Modal(document.getElementById('createPageModal'));
+    document.getElementById('newPageTitle').value = '';
+    modal.show();
+
+    // Focar no input quando o modal abrir
+    document.getElementById('createPageModal').addEventListener('shown.bs.modal', function () {
+        document.getElementById('newPageTitle').focus();
+    }, { once: true });
+}
+
+// Inicializar Editor.js
+function initEditor() {
+    let initialData = null;
+
+    // Tentar fazer parse do conteúdo se não estiver vazio
+    {% if page.content %}
+        try {
+            initialData = {{ page.content|safe }};
+        } catch (e) {
+            console.error('Erro ao fazer parse do conteúdo:', e);
+            initialData = null;
+        }
+    {% endif %}
+
+    editor = new EditorJS({
+        holder: 'editorjs',
+        placeholder: 'Digite / para ver as opções disponíveis...',
+        autofocus: true,
+
+        tools: {
+            header: {
+                class: Header,
+                inlineToolbar: true,
+                config: {
+                    levels: [1, 2, 3],
+                    defaultLevel: 1
+                }
+            },
+            paragraph: {
+                class: Paragraph,
+                inlineToolbar: true
+            },
+            List: {
+                class: EditorjsList,
+                inlineToolbar: true,
+                config: {
+                    defaultStyle: 'unordered'
+                },
+            },
+            quote: {
+                class: Quote,
+                inlineToolbar: true
+            },
+            image: {
+                class: SimpleImage,
+                inlineToolbar: true,
+                config: {
+                    placeholder: 'Cole a URL da imagem aqui...'
+                }
+            },
+            newPage: {
+                class: NewPageTool
+            }
+        },
+
+        data: initialData || {
+            blocks: []
+        },
+
+        onReady: () => {
+            console.log('✓ Editor.js pronto!');
+        }
+    });
+}
+
+// Função para salvar a página
+async function savePage() {
+    const saveBtn = document.getElementById('save-btn');
+    const title = document.getElementById('page-title').value;
+
+    // Verificar se o editor está inicializado
+    if (!editor) {
+        alert('Editor ainda não está pronto. Aguarde alguns segundos.');
+        return;
+    }
+
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Salvando...';
+
+    try {
+        const outputData = await editor.save();
+
+        const response = await fetch('/api/page/save/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                page_id: pageId,
+                title: title,
+                content: JSON.stringify(outputData)
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Recarregar a página para atualizar o sidebar
+            window.location.reload();
+        } else {
+            alert('Erro ao salvar: ' + data.message);
+        }
+    } catch (error) {
+        console.error('Erro ao salvar:', error);
+        alert('Erro ao salvar a página');
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="bi bi-save"></i> Salvar';
+    }
+}
+
+// Função para criar nova página filha
+async function createNewChildPage() {
+    const newPageTitle = document.getElementById('newPageTitle').value.trim();
+
+    if (!newPageTitle) {
+        alert('Por favor, digite um título para a nova página.');
+        return;
+    }
+
+    const confirmBtn = document.getElementById('confirmCreatePage');
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Criando...';
+
+    try {
+        // 1. Criar a nova página no backend
+        const response = await fetch('/api/page/create/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                parent_page_id: pageId,
+                title: newPageTitle
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            console.log('✓ Nova página criada:', data.page_slug);
+
+            // 2. Salvar a página atual antes de redirecionar
+            if (editor) {
+                try {
+                    const currentTitle = document.getElementById('page-title').value;
+                    const outputData = await editor.save();
+
+                    await fetch('/api/page/save/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: JSON.stringify({
+                            page_id: pageId,
+                            title: currentTitle,
+                            content: JSON.stringify(outputData)
+                        })
+                    });
+
+                    console.log('✓ Página atual salva');
+                } catch (saveError) {
+                    console.error('Erro ao salvar página atual:', saveError);
+                    // Continua mesmo se falhar o salvamento
+                }
+            }
+
+            // 3. Redirecionar para a nova página
+            window.location.href = data.page_url;
+
+        } else {
+            alert('Erro ao criar página: ' + data.message);
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = '<i class="bi bi-check-lg"></i> Criar Página';
+        }
+    } catch (error) {
+        console.error('Erro ao criar página:', error);
+        alert('Erro ao criar a página. Tente novamente.');
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<i class="bi bi-check-lg"></i> Criar Página';
+    }
+}
+
+// Event listeners
+document.getElementById('save-btn').addEventListener('click', savePage);
+
+// Atalho de teclado para salvar (Ctrl+S ou Cmd+S)
+document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        savePage();
+    }
+});
+
+// Inicializar o editor quando a página carregar
+window.addEventListener('load', initEditor);
+
+// Event listeners do modal de criar página
+document.getElementById('confirmCreatePage').addEventListener('click', createNewChildPage);
+
+// Permitir Enter no formulário do modal
+document.getElementById('createPageForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    createNewChildPage();
+});
+
+// Permitir Enter no input do título
+document.getElementById('newPageTitle').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        createNewChildPage();
+    }
+});
+</script>
+{% endblock %}

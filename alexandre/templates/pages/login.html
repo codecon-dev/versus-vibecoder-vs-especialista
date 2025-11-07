@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}Login - Notion Clone{% endblock %}
+
+{% block auth_content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-body p-5">
+                <h2 class="text-center mb-4">Entrar</h2>
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="id_username" class="form-label">Usuário</label>
+                        <input type="text" name="username" class="form-control" id="id_username" required autofocus>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_password" class="form-label">Senha</label>
+                        <input type="password" name="password" class="form-control" id="id_password" required>
+                    </div>
+
+                    {% if form.errors %}
+                        <div class="alert alert-danger" role="alert">
+                            Usuário ou senha inválidos.
+                        </div>
+                    {% endif %}
+
+                    <button type="submit" class="btn btn-primary w-100 mb-3">Entrar</button>
+                </form>
+
+                <div class="text-center">
+                    <p class="mb-0">Não tem uma conta? <a href="{% url 'signup' %}">Cadastre-se</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

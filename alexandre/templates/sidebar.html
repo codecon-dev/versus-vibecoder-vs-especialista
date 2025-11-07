@@ -1,0 +1,39 @@
+<!-- Sidebar Navigation -->
+<div class="sidebar-pages">
+    <div class="mb-3">
+        <small class="text-muted" style="font-size: 11px; text-transform: uppercase; padding-left: 12px;">Minhas Páginas</small>
+    </div>
+
+    {% for page_item in all_pages %}
+        {% if page_item.is_main_page %}
+            <a href="{% url 'page_detail' page_item.slug %}"
+               class="page-link-item {% if page_item.id == page.id %}active{% endif %}">
+                <i class="bi bi-house-door"></i>
+                {{ page_item.title }}
+            </a>
+
+            <!-- Páginas filhas da página principal -->
+            {% for child in all_pages %}
+                {% if child.parent_page and child.parent_page.id == page_item.id %}
+                    <a href="{% url 'page_detail' child.slug %}"
+                       class="page-link-item child-page {% if child.id == page.id %}active{% endif %}">
+                        <i class="bi bi-file-earmark-text"></i>
+                        {{ child.title }}
+                    </a>
+
+                    <!-- Páginas filhas de segundo nível -->
+                    {% for grandchild in all_pages %}
+                        {% if grandchild.parent_page and grandchild.parent_page.id == child.id %}
+                            <a href="{% url 'page_detail' grandchild.slug %}"
+                               class="page-link-item child-page {% if grandchild.id == page.id %}active{% endif %}"
+                               style="margin-left: 40px;">
+                                <i class="bi bi-file-earmark"></i>
+                                {{ grandchild.title }}
+                            </a>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    {% endfor %}
+</div>
